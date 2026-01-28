@@ -7,6 +7,7 @@ import ReferenceButton from "@/components/ReferenceButton";
 import ReferenceModal from "@/components/ReferenceModal";
 import VerseActionModal from "@/components/VerseActionModal";
 import NoteModal from "@/components/NoteModal";
+import BookNotesModal from "@/components/BookNotesModal";
 
 import { getBooks, getChapter } from "@/lib/bible";
 import type { BibleVersion } from "@/lib/bible";
@@ -17,6 +18,7 @@ export default function BibleScreen() {
   const [version, setVersion] = useState<BibleVersion>("KJV");
   const [showVersions, setShowVersions] = useState(false);
   const [showReference, setShowReference] = useState(false);
+  const [showBookNotes, setShowBookNotes] = useState(false);
 
   const books = getBooks(version);
   const [book, setBook] = useState(books[0]);
@@ -24,11 +26,9 @@ export default function BibleScreen() {
 
   const verses = getChapter(version, book, chapter);
 
-  // verse interaction
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [showVerseActions, setShowVerseActions] = useState(false);
 
-  // persisted state
   const [highlights, setHighlights] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [hydrated, setHydrated] = useState(false);
@@ -36,9 +36,10 @@ export default function BibleScreen() {
   const [showNoteModal, setShowNoteModal] = useState(false);
 
   const verseKey = (v: number) => `${version}-${book}-${chapter}-${v}`;
-  const getVerseText = (v: number) => verses[v - 1];
+  const getVerseText = (b: string, c: number, v: number) =>
+    getChapter(version, b, c)[v - 1];
 
-  /* -------------------- LOAD FROM STORAGE -------------------- */
+  /* Load storage */
   useEffect(() => {
     loadUserData().then((data) => {
       setHighlights(data.highlights);
@@ -47,7 +48,7 @@ export default function BibleScreen() {
     });
   }, []);
 
-  /* -------------------- SAVE TO STORAGE -------------------- */
+  /* Save storage */
   useEffect(() => {
     if (!hydrated) return;
     saveUserData({ highlights, notes });
@@ -77,6 +78,10 @@ export default function BibleScreen() {
           onPress={() => setShowReference(true)}
         />
 
+        <Pressable onPress={() => setShowBookNotes(true)}>
+          <Text style={{ color: "#007AFF" }}>Notes</Text>
+        </Pressable>
+
         <VersionButton
           version={version}
           onPress={() => setShowVersions(true)}
@@ -84,10 +89,7 @@ export default function BibleScreen() {
       </View>
 
       {/* READER */}
-      <ScrollView
-        style={{ flex: 1, padding: 16 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
+      <ScrollView style={{ flex: 1, padding: 16 }}>
         {verses.map((text, i) => {
           const verseNumber = i + 1;
           const key = verseKey(verseNumber);
@@ -174,7 +176,11 @@ export default function BibleScreen() {
       <NoteModal
         visible={showNoteModal}
         reference={`${book} ${chapter}:${selectedVerse}`}
-        verseText={selectedVerse !== null ? getVerseText(selectedVerse) : ""}
+        verseText={
+          selectedVerse !== null
+            ? getVerseText(book, chapter, selectedVerse)
+            : ""
+        }
         initialValue={
           selectedVerse !== null ? notes[verseKey(selectedVerse)] ?? "" : ""
         }
@@ -191,6 +197,20 @@ export default function BibleScreen() {
           setShowNoteModal(false);
         }}
         onClose={() => setShowNoteModal(false)}
+      />
+
+      <BookNotesModal
+        visible={showBookNotes}
+        book={book}
+        chapter={chapter}
+        version={version}
+        notes={notes}
+        getVerseText={getVerseText}
+        onSelectVerse={(c, v) => {
+          setChapter(c);
+          setSelectedVerse(v);
+        }}
+        onClose={() => setShowBookNotes(false)}
       />
     </View>
   );
