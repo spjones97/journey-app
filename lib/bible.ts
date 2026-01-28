@@ -43,3 +43,8 @@ export function getChapter(
 
     return chapterData.verses.map((v: any) => v.text)
 }
+
+export function getTranslationInfo(version: BibleVersion): string {
+    return BIBLES[version].translation
+}
+

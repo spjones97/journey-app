@@ -10,6 +10,7 @@
     "deploy": "npx expo export -p web && npx eas-cli@latest deploy"
   },
   "dependencies": {
+    "@react-native-picker/picker": "2.11.1",
     "axios": "^1.13.3",
     "expo": "^54.0.1",
     "expo-font": "^14.0.11",
