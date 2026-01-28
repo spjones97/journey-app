@@ -1,8 +1,18 @@
-import { Modal, View, Text, TextInput, Pressable } from "react-native";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useState, useEffect } from "react";
 
 type Props = {
   visible: boolean;
+  reference: string;
+  verseText: string;
   initialValue: string;
   onSave: (text: string) => void;
   onClose: () => void;
@@ -10,6 +20,8 @@ type Props = {
 
 export default function NoteModal({
   visible,
+  reference,
+  verseText,
   initialValue,
   onSave,
   onClose,
@@ -21,43 +33,78 @@ export default function NoteModal({
   }, [initialValue]);
 
   return (
-    <Modal visible={visible} animationType="slide">
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 10 }}>
-          Verse Note
-        </Text>
-
-        <TextInput
-          multiline
-          value={text}
-          onChangeText={setText}
-          placeholder="Write your note here..."
-          style={{
-            flex: 1,
-            textAlignVertical: "top",
-            borderWidth: 1,
-            borderColor: "#ccc",
-            borderRadius: 8,
-            padding: 10,
-          }}
+    <Modal visible={visible} transparent animationType="slide">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1, justifyContent: "flex-end" }}
+      >
+        {/* Backdrop */}
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.3)" }}
+          onPress={onClose}
         />
 
-        <Pressable
-          onPress={() => onSave(text)}
+        {/* Sheet */}
+        <View
           style={{
-            padding: 14,
-            backgroundColor: "#007AFF",
-            borderRadius: 8,
-            marginTop: 10,
+            backgroundColor: "white",
+            padding: 16,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            maxHeight: "70%",
           }}
         >
-          <Text style={{ color: "white", textAlign: "center" }}>Save</Text>
-        </Pressable>
+          {/* Reference */}
+          <Text style={{ fontWeight: "600", marginBottom: 6 }}>
+            {reference}
+          </Text>
 
-        <Pressable onPress={onClose} style={{ padding: 14 }}>
-          <Text style={{ textAlign: "center", color: "red" }}>Cancel</Text>
-        </Pressable>
-      </View>
+          {/* Verse Preview */}
+          <Text
+            style={{
+              fontStyle: "italic",
+              color: "#555",
+              marginBottom: 12,
+            }}
+            numberOfLines={3}
+          >
+            {verseText}
+          </Text>
+
+          {/* Note Input */}
+          <TextInput
+            multiline
+            value={text}
+            onChangeText={setText}
+            placeholder="Write your note..."
+            style={{
+              minHeight: 120,
+              borderWidth: 1,
+              borderColor: "#ccc",
+              borderRadius: 8,
+              padding: 10,
+              textAlignVertical: "top",
+            }}
+          />
+
+          {/* Actions */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 12,
+            }}
+          >
+            <Pressable onPress={onClose}>
+              <Text style={{ color: "red" }}>Cancel</Text>
+            </Pressable>
+
+            <Pressable onPress={() => onSave(text)}>
+              <Text style={{ color: "#007AFF", fontWeight: "600" }}>Save</Text>
+            </Pressable>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

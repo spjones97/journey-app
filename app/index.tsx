@@ -34,6 +34,8 @@ export default function BibleScreen() {
 
   const verseKey = (v: number) => `${version}-${book}-${chapter}-${v}`;
 
+  const getVerseText = (v: number) => verses[v - 1];
+
   return (
     <View style={{ flex: 1 }}>
       {/* TOP BAR */}
@@ -82,6 +84,9 @@ export default function BibleScreen() {
               <Text>
                 <Text style={{ fontWeight: "bold" }}>{verseNumber} </Text>
                 {text}
+                {notes[key] && (
+                  <Text style={{ color: "#007AFF", fontSize: 12 }}> 📝</Text>
+                )}
               </Text>
             </Pressable>
           );
@@ -143,6 +148,8 @@ export default function BibleScreen() {
 
       <NoteModal
         visible={showNoteModal}
+        reference={`${book} ${chapter}:${selectedVerse}`}
+        verseText={selectedVerse !== null ? getVerseText(selectedVerse) : ""}
         initialValue={
           selectedVerse !== null ? notes[verseKey(selectedVerse)] ?? "" : ""
         }
