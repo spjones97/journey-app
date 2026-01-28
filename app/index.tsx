@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 
 import VersionButton from "@/components/VersionButton";
@@ -6,10 +6,12 @@ import VersionModal from "@/components/VersionModal";
 import ReferenceButton from "@/components/ReferenceButton";
 import ReferenceModal from "@/components/ReferenceModal";
 import VerseActionModal from "@/components/VerseActionModal";
+import NoteModal from "@/components/NoteModal";
 
 import { getBooks, getChapter } from "@/lib/bible";
 import type { BibleVersion } from "@/lib/bible";
-import NoteModal from "@/components/NoteModal";
+
+import { loadUserData, saveUserData } from "@/lib/storage";
 
 export default function BibleScreen() {
   const [version, setVersion] = useState<BibleVersion>("KJV");
@@ -22,19 +24,42 @@ export default function BibleScreen() {
 
   const verses = getChapter(version, book, chapter);
 
-  // verse interaction state
+  // verse interaction
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [showVerseActions, setShowVerseActions] = useState(false);
 
-  // highlight state
+  // persisted state
   const [highlights, setHighlights] = useState<Record<string, boolean>>({});
-
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [hydrated, setHydrated] = useState(false);
+
   const [showNoteModal, setShowNoteModal] = useState(false);
 
   const verseKey = (v: number) => `${version}-${book}-${chapter}-${v}`;
-
   const getVerseText = (v: number) => verses[v - 1];
+
+  /* -------------------- LOAD FROM STORAGE -------------------- */
+  useEffect(() => {
+    loadUserData().then((data) => {
+      setHighlights(data.highlights);
+      setNotes(data.notes);
+      setHydrated(true);
+    });
+  }, []);
+
+  /* -------------------- SAVE TO STORAGE -------------------- */
+  useEffect(() => {
+    if (!hydrated) return;
+    saveUserData({ highlights, notes });
+  }, [highlights, notes, hydrated]);
+
+  if (!hydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading your notes…</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -156,10 +181,12 @@ export default function BibleScreen() {
         onSave={(text) => {
           if (selectedVerse !== null) {
             const key = verseKey(selectedVerse);
-            setNotes((prev) => ({
-              ...prev,
-              [key]: text,
-            }));
+            setNotes((prev) => {
+              const next = { ...prev };
+              if (!text.trim()) delete next[key];
+              else next[key] = text;
+              return next;
+            });
           }
           setShowNoteModal(false);
         }}
