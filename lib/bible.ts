@@ -1,6 +1,6 @@
 import kjvRaw from '@/assets/bible/KJV.json'
 import asvRaw from '@/assets/bible/ASV.json'
-import webRaw from '@/assets/bible/WEB.json'
+import webRaw from '@/assets/bible/Webster.json'
 
 export type BibleVersion = 'KJV' | 'ASV' | 'WEB'
 
