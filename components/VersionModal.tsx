@@ -1,6 +1,8 @@
 import { Modal, View, Text, Pressable, ScrollView } from "react-native";
-import { getAllTranslations } from "@/lib/bibleMeta";
+import { useEffect, useState } from "react";
+import { getTranslationInfo } from "@/lib/bible";
 import type { BibleVersion } from "@/lib/bible";
+import { AVAILABLE_VERSIONS } from "@/lib/versionList";
 
 type Props = {
   visible: boolean;
@@ -15,12 +17,44 @@ export default function VersionModal({
   onSelect,
   onClose,
 }: Props) {
-  const translations = getAllTranslations();
-  const versions = Object.keys(translations) as BibleVersion[];
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!visible) return;
+
+    let cancelled = false;
+
+    function loadTranslations() {
+      AVAILABLE_VERSIONS.forEach(async (version) => {
+        try {
+          const desc = await getTranslationInfo(version);
+
+          if (!cancelled) {
+            setTranslations((prev) => ({
+              ...prev,
+              [version]: desc,
+            }));
+          }
+        } catch {
+          if (!cancelled) {
+            setTranslations((prev) => ({
+              ...prev,
+              [version]: version,
+            }));
+          }
+        }
+      });
+    }
+
+    loadTranslations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      {/* Background */}
       <Pressable
         onPress={onClose}
         style={{
@@ -29,7 +63,6 @@ export default function VersionModal({
           justifyContent: "flex-end",
         }}
       >
-        {/* Bottom Sheet */}
         <Pressable
           style={{
             backgroundColor: "white",
@@ -39,7 +72,6 @@ export default function VersionModal({
             paddingTop: 12,
           }}
         >
-          {/* Handle */}
           <View
             style={{
               alignSelf: "center",
@@ -63,7 +95,7 @@ export default function VersionModal({
           </Text>
 
           <ScrollView>
-            {versions.map((v) => {
+            {AVAILABLE_VERSIONS.map((v) => {
               const isSelected = selected === v;
 
               return (
@@ -94,7 +126,7 @@ export default function VersionModal({
                       marginTop: 2,
                     }}
                   >
-                    {translations[v]}
+                    {translations[v] ?? "Loading…"}
                   </Text>
                 </Pressable>
               );

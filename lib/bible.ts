@@ -1,50 +1,82 @@
-import kjvRaw from '@/assets/bible/KJV.json'
-import asvRaw from '@/assets/bible/ASV.json'
-import webRaw from '@/assets/bible/Webster.json'
+import { fetchBible } from "./r2Bible";
 
-export type BibleVersion = 'KJV' | 'ASV' | 'WEB'
+export type BibleVersion = string;
 
-const normalize = (mod: any) => mod.default ?? mod
+const CACHE: Record<string, any> = {};
+const META_CACHE: Record<string, string> = {};
 
-const BIBLES: Record<BibleVersion, any> = {
-    KJV: normalize(kjvRaw),
-    ASV: normalize(asvRaw),
-    WEB: normalize(webRaw),
+/* ---------------- LOAD FULL BIBLE ---------------- */
+
+async function getBible(version: BibleVersion) {
+    if (!CACHE[version]) {
+        const bible = await fetchBible(version);
+        CACHE[version] = bible;
+
+        if (bible.translation) {
+            META_CACHE[version] = bible.translation;
+        }
+    }
+
+    return CACHE[version];
 }
 
-export function getBooks(version: BibleVersion): string[] {
-    return BIBLES[version].books.map((b: any) => b.name)
+/* ---------------- BOOK HELPERS ---------------- */
+
+export async function getBooks(version: BibleVersion) {
+    const bible = await getBible(version);
+    return bible.books.map((b: any) => b.name);
 }
 
-export function getChapterCount(
+export async function getChapterCount(
     version: BibleVersion,
     book: string
-): number {
-    const bookData = BIBLES[version].books.find(
-        (b: any) => b.name === book
-    )
-    return bookData ? bookData.chapters.length : 0
+) {
+    const bible = await getBible(version);
+
+    const bookData = bible.books.find((b: any) => b.name === book);
+    return bookData ? bookData.chapters.length : 0;
 }
 
-export function getChapter(
+export async function getChapter(
     version: BibleVersion,
     book: string,
     chapter: number
-): string[] {
-    const bookData = BIBLES[version].books.find(
-        (b: any) => b.name === book
-    )
-    if (!bookData) return []
+) {
+    const bible = await getBible(version);
+
+    const bookData = bible.books.find((b: any) => b.name === book);
+    if (!bookData) return [];
 
     const chapterData = bookData.chapters.find(
         (c: any) => c.chapter === chapter
-    )
-    if (!chapterData) return []
+    );
 
-    return chapterData.verses.map((v: any) => v.text)
+    if (!chapterData) return [];
+
+    return chapterData.verses.map((v: any) => v.text);
 }
 
-export function getTranslationInfo(version: BibleVersion): string {
-    return BIBLES[version].translation
+/* ---------------- TRANSLATION META ---------------- */
+
+export async function getTranslationInfo(version: BibleVersion) {
+    if (META_CACHE[version]) return META_CACHE[version];
+
+    const bible = await getBible(version);
+    return bible.translation ?? version;
 }
 
+/* ---------------- VERSION LIST ---------------- */
+
+export async function getAllTranslations(
+    versions: BibleVersion[]
+) {
+    const result: Record<string, string> = {};
+
+    await Promise.all(
+        versions.map(async (v) => {
+            result[v] = await getTranslationInfo(v);
+        })
+    );
+
+    return result;
+}
