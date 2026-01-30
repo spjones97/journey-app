@@ -2,8 +2,7 @@
   "expo": {
     "scheme": "acme",
     "plugins": [
-      "expo-router",
-      "expo-secure-store"
+      "expo-router"
     ],
     "name": "journey-app",
     "slug": "journey-app"
