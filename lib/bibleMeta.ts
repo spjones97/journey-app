@@ -1,51 +1,34 @@
-import kjvRaw from "@/assets/bible/KJV.json";
-import asvRaw from "@/assets/bible/ASV.json";
-import webRaw from "@/assets/bible/Webster.json";
 import type { BibleVersion } from "./bible";
+import { fetchBible, fetchAvailableVersions } from "./r2Bible";
 
-const normalize = (mod: any) => mod.default ?? mod;
-
-const BIBLES: Record<BibleVersion, any> = {
-    KJV: normalize(kjvRaw),
-    ASV: normalize(asvRaw),
-    WEB: normalize(webRaw),
-};
-
-/* ------------------ BOOK HELPERS ------------------ */
-
-export function getBooks(version: BibleVersion): string[] {
-    return BIBLES[version]?.books?.map((b: any) => b.name) ?? [];
+/**
+ * Returns translation description for ONE version
+ */
+export async function getTranslationDescription(
+    version: BibleVersion
+): Promise<string> {
+    try {
+        const bible = await fetchBible(version);
+        return bible.translation ?? version;
+    } catch {
+        return version;
+    }
 }
 
-export function getChapterCount(
-    version: BibleVersion,
-    book: string
-): number {
-    const bookData = BIBLES[version]?.books?.find(
-        (b: any) => b.name === book
+/**
+ * Returns ALL versions → translation description map
+ */
+export async function getAllTranslations(): Promise<
+    Record<BibleVersion, string>
+> {
+    const versions = await fetchAvailableVersions();
+
+    const results = await Promise.all(
+        versions.map(async (v) => {
+            const desc = await getTranslationDescription(v);
+            return [v, desc] as const;
+        })
     );
 
-    if (!bookData) return 0;
-    return bookData.chapters.length;
+    return Object.fromEntries(results);
 }
-
-/* ------------------ NEW: TRANSLATION META ------------------ */
-
-export function getTranslationDescription(
-    version: BibleVersion
-): string {
-    return BIBLES[version]?.translation ?? version;
-}
-
-export function getAllTranslations(): Record<
-    BibleVersion,
-    string
-> {
-    return {
-        KJV: getTranslationDescription("KJV"),
-        ASV: getTranslationDescription("ASV"),
-        WEB: getTranslationDescription("WEB"),
-    };
-}
-
-export { BIBLES };

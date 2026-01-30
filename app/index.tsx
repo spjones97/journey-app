@@ -15,19 +15,28 @@ import type { BibleVersion } from "@/lib/bible";
 import { loadUserData, saveUserData } from "@/lib/storage";
 
 export default function BibleScreen() {
+  /* ---------------- VERSION / REFERENCE ---------------- */
+
   const [version, setVersion] = useState<BibleVersion>("KJV");
   const [showVersions, setShowVersions] = useState(false);
   const [showReference, setShowReference] = useState(false);
   const [showBookNotes, setShowBookNotes] = useState(false);
 
-  const books = getBooks(version);
-  const [book, setBook] = useState(books[0]);
+  const [books, setBooks] = useState<string[]>([]);
+  const [book, setBook] = useState<string>("");
   const [chapter, setChapter] = useState(1);
 
-  const verses = getChapter(version, book, chapter);
+  /* ---------------- BIBLE CONTENT ---------------- */
+
+  const [verses, setVerses] = useState<string[]>([]);
+  const [bibleLoading, setBibleLoading] = useState(true);
+
+  /* ---------------- VERSE INTERACTION ---------------- */
 
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [showVerseActions, setShowVerseActions] = useState(false);
+
+  /* ---------------- USER DATA ---------------- */
 
   const [highlights, setHighlights] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -35,11 +44,14 @@ export default function BibleScreen() {
 
   const [showNoteModal, setShowNoteModal] = useState(false);
 
-  const verseKey = (v: number) => `${version}-${book}-${chapter}-${v}`;
-  const getVerseText = (b: string, c: number, v: number) =>
-    getChapter(version, b, c)[v - 1];
+  /* ---------------- HELPERS ---------------- */
 
-  /* Load storage */
+  const verseKey = (v: number) => `${version}-${book}-${chapter}-${v}`;
+
+  const getVerseText = (b: string, c: number, v: number) => verses[v - 1] ?? "";
+
+  /* ---------------- LOAD USER STORAGE ---------------- */
+
   useEffect(() => {
     loadUserData().then((data) => {
       setHighlights(data.highlights);
@@ -48,11 +60,43 @@ export default function BibleScreen() {
     });
   }, []);
 
-  /* Save storage */
   useEffect(() => {
     if (!hydrated) return;
     saveUserData({ highlights, notes });
   }, [highlights, notes, hydrated]);
+
+  /* ---------------- LOAD BOOK LIST ---------------- */
+
+  useEffect(() => {
+    async function loadBooks() {
+      const list = await getBooks(version);
+      setBooks(list);
+
+      if (list.length > 0) {
+        setBook(list[0]);
+        setChapter(1);
+      }
+    }
+
+    loadBooks();
+  }, [version]);
+
+  /* ---------------- LOAD CHAPTER ---------------- */
+
+  useEffect(() => {
+    if (!book) return;
+
+    async function loadChapter() {
+      setBibleLoading(true);
+      const data = await getChapter(version, book, chapter);
+      setVerses(data);
+      setBibleLoading(false);
+    }
+
+    loadChapter();
+  }, [version, book, chapter]);
+
+  /* ---------------- LOADING STATES ---------------- */
 
   if (!hydrated) {
     return (
@@ -61,6 +105,16 @@ export default function BibleScreen() {
       </View>
     );
   }
+
+  if (bibleLoading || !book) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading Bible…</Text>
+      </View>
+    );
+  }
+
+  /* ---------------- UI ---------------- */
 
   return (
     <View style={{ flex: 1 }}>
@@ -148,18 +202,17 @@ export default function BibleScreen() {
         }}
       />
 
-      {/* MODALS */}
+      {/* VERSION MODAL */}
       <VersionModal
         visible={showVersions}
         onClose={() => setShowVersions(false)}
         onSelect={(v) => {
           setVersion(v);
-          const newBooks = getBooks(v);
-          setBook(newBooks[0]);
-          setChapter(1);
+          setShowVersions(false);
         }}
       />
 
+      {/* REFERENCE MODAL */}
       <ReferenceModal
         visible={showReference}
         version={version}
@@ -173,6 +226,7 @@ export default function BibleScreen() {
         onClose={() => setShowReference(false)}
       />
 
+      {/* NOTE MODAL */}
       <NoteModal
         visible={showNoteModal}
         reference={`${book} ${chapter}:${selectedVerse}`}
@@ -199,6 +253,7 @@ export default function BibleScreen() {
         onClose={() => setShowNoteModal(false)}
       />
 
+      {/* BOOK NOTES */}
       <BookNotesModal
         visible={showBookNotes}
         book={book}
